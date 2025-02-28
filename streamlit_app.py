@@ -7,6 +7,7 @@ from phi.workflow import Workflow
 from phi.model.ollama import Ollama
 import os
 from datetime import datetime
+from PyPDF2 import PdfReader
 
 load_dotenv()
 
@@ -37,7 +38,8 @@ Phsy_instructions = [
 
 
 
-instructions_new=["""1. EXPLORATION OVER CONCLUSION
+instructions_new=["""You are Psychiatrist, an AI-powered assistant specializing in physical and mental wellness.
+                        1. EXPLORATION OVER CONCLUSION
                         Never rush to conclusions
                         Keep exploring until a solution emerges naturally from the evidence
                         If uncertain, continue reasoning indefinitely
@@ -59,6 +61,37 @@ instructions_new=["""1. EXPLORATION OVER CONCLUSION
                         Output Format
 # #                         """]
 
+def read_pdf(file_path):
+    """
+    Reads a PDF file and returns its number of pages and text from the first page.
+    
+    Args:
+        file_path (str): Path to the PDF file
+        
+    Returns:
+        dict: Dictionary containing number of pages and first page text
+            or error message if reading fails
+    """
+    try:
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            
+            num_pages = len(reader.pages)
+            first_page_text = reader.pages[0].extract_text()
+            
+            return {
+                'num_pages': num_pages,
+                'first_page_text': first_page_text.strip(),
+                'error': None
+            }
+            
+    except FileNotFoundError:
+        return {'error': 'File not found'}
+    except Exception as e:
+        return {'error': f'Error reading PDF: {str(e)}'}
+    
+    
+    
 # Truncate function
 def truncate_response(text, max_words=400):
     words = text.split()
@@ -225,8 +258,9 @@ else:
         st.success(f"File '{uploaded_file.name}' uploaded successfully!")
         
         if st.button("Process Uploaded File"):
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                file_content = f.read()
+            file_content=read_pdf(file_path)
+            # with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            #     file_content = f.read()
             
             st.session_state.messages.append({
                 "role": "user",
