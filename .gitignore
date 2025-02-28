@@ -1,0 +1,42 @@
+# Environment files
+.env
+*.env
+
+# Database files
+*.db
+*.sqlite*
+*.db3
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Log files
+*.log
+
+# Python specific
+__pycache__/
+*.py[cod]
+.python-version
+
+# Virtual environment
+venv/
+.env/
+venv*/
+*.venv
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build/output directories
+dist/
+build/
+*.egg-info/
