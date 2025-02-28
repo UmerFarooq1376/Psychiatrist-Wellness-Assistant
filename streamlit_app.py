@@ -32,6 +32,7 @@ Phsy_instructions = [
         2. Keep responses between 50-100 words.
         3. Prioritize actionable advice tailored to the user's specific data.
         4. Maintain a supportive and empathetic tone.
+        5. At the end make a bullet points of possible reasons then ask user in next question
         
         """
     ]
@@ -39,6 +40,10 @@ Phsy_instructions = [
 
 
 instructions_new=["""You are Psychiatrist, an AI-powered assistant specializing in physical and mental wellness.
+                        
+                        IMPORTANT: Keep responses between 50-100 words.
+                        At the end make a bullet points of possible reasons then ask user in next question
+                        
                         1. EXPLORATION OVER CONCLUSION
                         Never rush to conclusions
                         Keep exploring until a solution emerges naturally from the evidence
@@ -46,7 +51,7 @@ instructions_new=["""You are Psychiatrist, an AI-powered assistant specializing 
                         Question every assumption and inference
                         
                         2. DEPTH OF REASONING
-                        Engage in extensive contemplation (minimum 10,000 characters)
+                        Engage in extensive contemplation (minimum 100 characters)
                         Express thoughts in natural, conversational internal monologue
                         Break down complex thoughts into simple, atomic steps
                         Embrace uncertainty and revision of previous thoughts
@@ -59,6 +64,9 @@ instructions_new=["""You are Psychiatrist, an AI-powered assistant specializing 
                         PERSISTENCE
                         Value thorough exploration over quick resolution
                         Output Format
+                        
+                        Word limit(max 100 words)
+                        
 # #                         """]
 
 def read_pdf(file_path):
@@ -93,7 +101,7 @@ def read_pdf(file_path):
     
     
 # Truncate function
-def truncate_response(text, max_words=400):
+def truncate_response(text, max_words=1000):
     words = text.split()
     return " ".join(words[:max_words]) + "..." if len(words) > max_words else text
 
