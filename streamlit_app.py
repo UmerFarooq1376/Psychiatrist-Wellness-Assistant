@@ -1,4 +1,5 @@
 import streamlit as st
+from langdetect import detect
 from textwrap import dedent
 from phi.storage.agent.sqlite import SqlAgentStorage
 from dotenv import load_dotenv
@@ -123,10 +124,17 @@ def generate_bot_response():
     """Generate bot response for the latest user message."""
     last_user_msg = st.session_state.messages[-1]["content"]
     user_info = st.session_state.workflow.user_info
+    
+    # Detect language
+    try:
+        user_lang = detect(last_user_msg)
+    except:
+        user_lang = "en"  # Default to English
+    
     context = (
-            f"Translate the following int the language user do conversation , My name is {user_info['name']} and age {user_info['age']} "
+            f"Generate the response in the language ,User language: {user_lang} , My name is {user_info['name']} and age {user_info['age']} "
             f"and ethnicity is {user_info.get('ethnicity', 'not provided')} while replying.Include Name in every respnse ,Do not include age and ethinicity in every response "
-            f"Keel in mind last response summary {st.session_state.conversation_summary}. Reply in the same Language the user is asking, use these instructions {instructions_new} "
+            f"Keel in mind last response summary {st.session_state.conversation_summary}.Use these instructions {instructions_new} "
             # f"{prompt}"
     )
     response = st.session_state.workflow.physcatrist.run(context)
@@ -293,17 +301,25 @@ else:
         #     f"
         # )
         health_data=st.session_state.workflow.health_data
+        
+        try:
+            user_lang = detect(prompt)
+            print("Print User Language",user_lang)
+        except:
+            user_lang = "en"  # Default to English
+        
         context = dedent(f"""
             User details:
             - Name: {user_info.get('name')}
             - Age: {user_info.get('age')}
             - Ethnicity: {user_info.get('ethnicity', 'Not provided')}
-            Always use name in generating the response 
+            - Give response in User language = {user_lang}
+            - Always use name in generating the response 
+            
             Recent health data:
             - Weight: {health_data.get('weight', 'Not logged')}kg
             - Mood: {health_data.get('mood', 'Not logged')}
             - Sleep: {health_data.get('sleep_hours', 'Not logged')} hours
-            
             Last summary: {st.session_state.conversation_summary}
             User query: {prompt}
         """).strip()
