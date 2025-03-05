@@ -9,6 +9,8 @@ from phi.model.ollama import Ollama
 import os
 from datetime import datetime
 from PyPDF2 import PdfReader
+import webbrowser
+from typing import Dict, List
 
 load_dotenv()
 
@@ -34,6 +36,21 @@ Phsy_instructions = [
         3. Prioritize actionable advice tailored to the user's specific data.
         4. Maintain a supportive and empathetic tone.
         5. At the end make a bullet points of possible reasons 
+
+        Additional Guidelines:
+        - If you detect severe symptoms or situations requiring professional medical attention,
+          use the doctor_consultation_tool to connect the user with a specialist.
+        - Recommend doctor consultation for:
+          * Severe depression or anxiety symptoms
+          * Suicidal thoughts
+          * Complex mental health issues
+          * Cases requiring medication
+          * Situations beyond AI assistance scope
+        
+        When recommending a doctor:
+        1. Explain why professional help is needed
+        2. Call the doctor_consultation_tool with appropriate reason and urgency
+        3. Continue providing support while arranging the consultation
         
         """
     ]
@@ -69,6 +86,69 @@ instructions_new=["""You are Psychiatrist, an AI-powered assistant specializing 
                         Word limit(max 100 words)
                         
 # #                         """]
+def call_doctor():
+    """Handle doctor call functionality"""
+    st.subheader("Contact a Doctor")
+    call_type = st.radio("Select contact method:", ["Phone Call", "Video Call"])
+    
+    # Display available doctors
+    doctors = {
+        "Dr. Smith": "+1-555-0123",
+        "Dr. Johnson": "+1-555-0124",
+        "Dr. Williams": "+1-555-0125"
+    }
+    
+    selected_doctor = st.selectbox("Choose a doctor:", list(doctors.keys()))
+    
+    if st.button("Connect Now"):
+        phone_number = doctors[selected_doctor]
+        if call_type == "Phone Call":
+            # For phone calls, we use tel: protocol
+            webbrowser.open(f"tel:{phone_number}")
+        else:
+            # For video calls, you might want to integrate with a telemedicine platform
+            st.info(f"Initiating video call with {selected_doctor}")
+            # Add your video call integration here
+        
+        st.success(f"Connecting you with {selected_doctor}")
+
+def doctor_consultation_tool(reason: str, urgency: str = "normal") -> Dict:
+    """
+    Tool for initiating doctor consultation when the AI determines it's necessary.
+    
+    Args:
+        reason: The medical reason for consultation
+        urgency: Urgency level ("normal", "urgent", "emergency")
+    """
+    st.subheader("🏥 Doctor Consultation Recommended")
+    st.write(f"Reason: {reason}")
+    st.write(f"Urgency: {urgency}")
+    
+    doctors = {
+        "Dr. Smith (General Psychiatrist)": "+1-555-0123",
+        "Dr. Johnson (Anxiety Specialist)": "+1-555-0124",
+        "Dr. Williams (Depression Specialist)": "+1-555-0125"
+    }
+    
+    call_type = st.radio("Select consultation method:", ["Phone Call", "Video Call"])
+    selected_doctor = st.selectbox("Choose a specialist:", list(doctors.keys()))
+    
+    if st.button("Connect Now"):
+        phone_number = doctors[selected_doctor]
+        if call_type == "Phone Call":
+            webbrowser.open(f"tel:{phone_number}")
+        else:
+            st.info(f"Initiating video call with {selected_doctor}")
+        
+        return {
+            "status": "success",
+            "doctor": selected_doctor,
+            "consultation_type": call_type,
+            "reason": reason
+        }
+    
+    return {"status": "pending"}
+
 
 def read_pdf(file_path):
     """
@@ -152,7 +232,8 @@ class WellnessWorkflow(Workflow):
         instructions=Phsy_instructions,
         storage=SqlAgentStorage(db_file="wellness_agent.db", table_name="phsycatrist"),
         markdown=True,
-        debug=False
+        debug=False,
+        tools=[doctor_consultation_tool]
     )
 
 # Initialize session state
@@ -212,6 +293,9 @@ else:
             })
             generate_bot_response()
             st.rerun()
+            # Add new Call Doctor button
+        if st.button("📞 Call Doctor"):
+            call_doctor()
         # Add more buttons as needed
     with st.sidebar:
         st.header("Health Tracker")
