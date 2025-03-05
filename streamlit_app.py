@@ -37,24 +37,42 @@ Phsy_instructions = [
         3. Prioritize actionable advice tailored to the user's specific data.
         4. Maintain a supportive and empathetic tone.
         5. At the end make a bullet points of possible reasons 
-"""
+
+
+
+        """
+        # f"‼️ CRITICAL INSTRUCTION - DOCTOR CONSULTATION FORMAT ‼️\n"
+        # f"STRICTLY FORMAT YOUR RESPONSE AS [CALL_DOCTOR] ONLY IN THESE TWO SPECIFIC SCENARIOS:\n"
+        # f"1. WHEN USER EXPLICITLY REQUESTS TO SPEAK WITH A DOCTOR\n"
+        # f"2. WHEN YOU DETECT ANY OF THESE SEVERE CONDITIONS:\n"
+        # f"   - SEVERE DEPRESSION OR ANXIETY SYMPTOMS\n"
+        # f"   - SUICIDAL THOUGHTS OR SELF-HARM INDICATORS\n"
+        # f"   - COMPLEX MENTAL HEALTH ISSUES REQUIRING PROFESSIONAL INTERVENTION\n"
+        # f"   - CASES NEEDING MEDICATION OR CLINICAL ASSESSMENT\n"
+        # f"   - SITUATIONS BEYOND AI ASSISTANCE CAPABILITIES\n\n"
+        # f"⚠️ DO NOT USE THIS FORMAT FOR ANY OTHER SCENARIOS ⚠️\n"
+        # f"When required, format EXACTLY as:\n"
+        # f"[CALL_DOCTOR]{{\"action\":\"call_doctor\",\"reason\":\"detailed_critical_reason\",\"urgency\":\"normal/urgent/emergency\",\"consultation_type\":\"phone\"}} followed by your supportive message.\n"
+        # f"FOR ALL OTHER CASES, PROVIDE NORMAL SUPPORTIVE RESPONSES WITHOUT THE [CALL_DOCTOR] FORMAT."
+        ]
         # Additional Guidelines:
-        # - If you detect severe symptoms or situations requiring professional medical attention,
-        #   use the doctor_consultation_tool to connect the user with a specialist.
-        # - Recommend doctor consultation for:
-        #   * Severe depression or anxiety symptoms
-        #   * Suicidal thoughts
-        #   * Complex mental health issues
-        #   * Cases requiring medication
-        #   * Situations beyond AI assistance scope
+    #     - If you detect severe symptoms or situations requiring professional medical attention,
+    #       use the doctor_consultation_tool to connect the user with a specialist.
+    #     - Recommend doctor consultation for:
+    #       * Severe depression or anxiety symptoms
+    #       * Suicidal thoughts
+    #       * Complex mental health issues
+    #       * Cases requiring medication
+    #       * Situations beyond AI assistance scope
+    #      - If there is need and user asked request for a calling the doctor ,*** Only then call the doctor NOT EVERYTIME giving ** format your response as: [CALL_DOCTOR]{{\"action\":\"call_doctor\",\"reason\":\"...\",\"urgency\":\"normal\",\"consultation_type\":\"phone\"}} followed by your message.
         
-        # When recommending a doctor:
-        # 1. Explain why professional help is needed
-        # 2. Call the doctor_consultation_tool with appropriate reason and urgency
-        # 3. Continue providing support while arranging the consultation
+    #     When recommending a doctor:
+    #     1. Explain why professional help is needed
+    #     2. Call the doctor_consultation_tool with appropriate reason and urgency
+    #     3. Continue providing support while arranging the consultation
         
-        # """
-    ]
+    #     """
+    # ]
 
 
 
@@ -202,7 +220,7 @@ def extract_content_from_response(response):
         response_text = f"An error occurred: {str(e)}"
     return response_text
 
-def generate_bot_response(contex_new=""):
+def generate_bot_response(context_new=""):
     """Generate bot response for the latest user message."""
     # last_user_msg = st.session_state.messages[-1]["content"]
     last_user_msg = st.session_state.messages[-1]["content"].lower()
@@ -223,17 +241,54 @@ def generate_bot_response(contex_new=""):
         )
         return
 
+    # context = (
+    #         f"{context_new}"
+    #         f"Generate the response in the language ,User language: {user_lang} , My name is {user_info['name']} and age {user_info['age']} "
+    #         f"and ethnicity is {user_info.get('ethnicity', 'not provided')} while replying.Include Name in every respnse ,Do not include age and ethinicity in every response "
+    #         f"Keel in mind last response summary {st.session_state.conversation_summary}."
+    #         # Use these instructions {instructions_new} "
+    #         #f"If you determine professional medical help is needed, start your response with '[DOCTOR_NEEDED]' followed by the reason and urgency level (normal/urgent/emergency)."
+    #         # f"{prompt}"
+    #         # f"If there is need and user asked request for a calling the doctor , format your response as: [CALL_DOCTOR]{{\"action\":\"call_doctor\",\"reason\":\"...\",\"urgency\":\"normal\",\"consultation_type\":\"phone\"}} followed by your message."
+    #         f"‼️ CRITICAL INSTRUCTION - DOCTOR CONSULTATION FORMAT ‼️\n"
+    #         f"STRICTLY FORMAT YOUR RESPONSE AS [CALL_DOCTOR] ONLY IN THESE TWO SPECIFIC SCENARIOS:\n"
+    #         f"1. WHEN USER EXPLICITLY REQUESTS TO SPEAK WITH A DOCTOR\n"
+    #         f"2. WHEN YOU DETECT ANY OF THESE SEVERE CONDITIONS:\n"
+    #         f"   - SEVERE DEPRESSION OR ANXIETY SYMPTOMS\n"
+    #         f"   - SUICIDAL THOUGHTS OR SELF-HARM INDICATORS\n"
+    #         f"   - COMPLEX MENTAL HEALTH ISSUES REQUIRING PROFESSIONAL INTERVENTION\n"
+    #         f"   - CASES NEEDING MEDICATION OR CLINICAL ASSESSMENT\n"
+    #         f"   - SITUATIONS BEYOND AI ASSISTANCE CAPABILITIES\n\n"
+    #         f"⚠️ DO NOT USE THIS FORMAT FOR ANY OTHER SCENARIOS ⚠️\n"
+    #         f"When required, format EXACTLY as:\n"
+    #         f"[CALL_DOCTOR]{{\"action\":\"call_doctor\",\"reason\":\"detailed_critical_reason\",\"urgency\":\"normal/urgent/emergency\",\"consultation_type\":\"phone\"}} followed by your supportive message.\n"
+    #         f"FOR ALL OTHER CASES, PROVIDE NORMAL SUPPORTIVE RESPONSES WITHOUT THE [CALL_DOCTOR] FORMAT."    
+    # )
+
     context = (
-            f"Follow THese {context_new}"
-            f"Generate the response in the language ,User language: {user_lang} , My name is {user_info['name']} and age {user_info['age']} "
-            f"and ethnicity is {user_info.get('ethnicity', 'not provided')} while replying.Include Name in every respnse ,Do not include age and ethinicity in every response "
-            f"Keel in mind last response summary {st.session_state.conversation_summary}."
-            # Use these instructions {instructions_new} "
-            #f"If you determine professional medical help is needed, start your response with '[DOCTOR_NEEDED]' followed by the reason and urgency level (normal/urgent/emergency)."
-            f"{prompt}"
-            f"If there is need and user asked request for a calling the doctor , format your response as: [CALL_DOCTOR]{{\"action\":\"call_doctor\",\"reason\":\"...\",\"urgency\":\"normal\",\"consultation_type\":\"phone\"}} followed by your message."
-    )
-    print("Context",context)
+        f"{context_new}"
+        f"Instructions:\n"
+        f"1. Generate response in {user_lang} language\n"
+        f"2. Address user as {user_info['name']}\n"
+        f"3. Previous conversation summary: {st.session_state.conversation_summary}\n\n"
+        
+        f"DOCTOR CONSULTATION RULES:\n"
+        f"Format as [CALL_DOCTOR] ONLY if:\n"
+        f"1. User directly asks for a doctor\n"
+        f"2. You detect:\n"
+        f"   • Severe depression/anxiety\n"
+        f"   • Suicidal thoughts\n"
+        f"   • Complex mental health issues\n"
+        f"   • Need for medication\n"
+        f"   • Issues beyond AI scope\n\n"
+        
+        f"Response format when doctor needed:\n"
+        f'[CALL_DOCTOR]{{"action":"call_doctor","reason":"REASON","urgency":"URGENCY","consultation_type":"phone"}}\n'
+        f"Your supportive message here.\n\n"
+        
+        f"For all other cases: Provide normal supportive response."
+        )
+    # print("Context",context)
     response = st.session_state.workflow.physcatrist.run(context)
     response_text = extract_content_from_response(response)
     # Check if doctor consultation is recommended
@@ -346,7 +401,7 @@ else:
                 "role": "user",
                 "content": "Geneate possible reason that lead to stress, Then Ask User Question , when you are confident enough then give Stress management techniques"
             })
-            generate_bot_response()
+            generate_bot_response("Geneate possible reason that lead to stress, Then Ask User Question , when you are confident enough then give Stress management technique")
             st.rerun()
         
         if st.button("Sleep Improvement"):
@@ -354,7 +409,7 @@ else:
                 "role": "user",
                 "content": "How to sleep better"
             })
-            generate_bot_response()
+            generate_bot_response(context_new="How to sleep better")
             st.rerun()
             
         if st.button("Diet Suggestions"):
@@ -362,7 +417,7 @@ else:
                 "role": "user",
                 "content": "Ask Questions about all things that can be used in calculating bmi etc , Then give proper diet plan to the user , take into account every aspect"
             })
-            generate_bot_response()
+            generate_bot_response(context_new="sk Questions about all things that can be used in calculating bmi etc , Then give proper diet plan to the user , take into account every aspect")
             st.rerun()
             # Add new Call Doctor button
         if st.button("📞 Call Doctor"):
@@ -437,7 +492,7 @@ else:
                 "role": "user",
                 "content": f"Process this file: {file_content}"
             })
-            generate_bot_response()
+            generate_bot_response(context_new="")
             st.rerun()
 
     # User input via chat
