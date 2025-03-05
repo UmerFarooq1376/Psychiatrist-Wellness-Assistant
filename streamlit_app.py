@@ -11,6 +11,7 @@ from datetime import datetime
 from PyPDF2 import PdfReader
 import webbrowser
 from typing import Dict, List
+import json
 
 load_dotenv()
 
@@ -36,23 +37,23 @@ Phsy_instructions = [
         3. Prioritize actionable advice tailored to the user's specific data.
         4. Maintain a supportive and empathetic tone.
         5. At the end make a bullet points of possible reasons 
-
-        Additional Guidelines:
-        - If you detect severe symptoms or situations requiring professional medical attention,
-          use the doctor_consultation_tool to connect the user with a specialist.
-        - Recommend doctor consultation for:
-          * Severe depression or anxiety symptoms
-          * Suicidal thoughts
-          * Complex mental health issues
-          * Cases requiring medication
-          * Situations beyond AI assistance scope
+"""
+        # Additional Guidelines:
+        # - If you detect severe symptoms or situations requiring professional medical attention,
+        #   use the doctor_consultation_tool to connect the user with a specialist.
+        # - Recommend doctor consultation for:
+        #   * Severe depression or anxiety symptoms
+        #   * Suicidal thoughts
+        #   * Complex mental health issues
+        #   * Cases requiring medication
+        #   * Situations beyond AI assistance scope
         
-        When recommending a doctor:
-        1. Explain why professional help is needed
-        2. Call the doctor_consultation_tool with appropriate reason and urgency
-        3. Continue providing support while arranging the consultation
+        # When recommending a doctor:
+        # 1. Explain why professional help is needed
+        # 2. Call the doctor_consultation_tool with appropriate reason and urgency
+        # 3. Continue providing support while arranging the consultation
         
-        """
+        # """
     ]
 
 
@@ -120,6 +121,7 @@ def doctor_consultation_tool(reason: str, urgency: str = "normal") -> Dict:
         reason: The medical reason for consultation
         urgency: Urgency level ("normal", "urgent", "emergency")
     """
+    print("<============ Calling Doctor ===========>")
     st.subheader("🏥 Doctor Consultation Recommended")
     st.write(f"Reason: {reason}")
     st.write(f"Urgency: {urgency}")
@@ -200,9 +202,10 @@ def extract_content_from_response(response):
         response_text = f"An error occurred: {str(e)}"
     return response_text
 
-def generate_bot_response():
+def generate_bot_response(contex_new=""):
     """Generate bot response for the latest user message."""
-    last_user_msg = st.session_state.messages[-1]["content"]
+    # last_user_msg = st.session_state.messages[-1]["content"]
+    last_user_msg = st.session_state.messages[-1]["content"].lower()
     user_info = st.session_state.workflow.user_info
     
     # Detect language
@@ -210,19 +213,87 @@ def generate_bot_response():
         user_lang = detect(last_user_msg)
     except:
         user_lang = "en"  # Default to English
-    
+
+    # Direct user request check
+    doctor_keywords = ["call doctor", "need doctor", "see doctor"]
+    if any(keyword in last_user_msg for keyword in doctor_keywords):
+        consultation_result = doctor_consultation_tool(
+            reason=f"Immediate user request for consultation",
+            urgency="normal"
+        )
+        return
+
     context = (
+            f"Follow THese {context_new}"
             f"Generate the response in the language ,User language: {user_lang} , My name is {user_info['name']} and age {user_info['age']} "
             f"and ethnicity is {user_info.get('ethnicity', 'not provided')} while replying.Include Name in every respnse ,Do not include age and ethinicity in every response "
-            f"Keel in mind last response summary {st.session_state.conversation_summary}.Use these instructions {instructions_new} "
-            # f"{prompt}"
+            f"Keel in mind last response summary {st.session_state.conversation_summary}."
+            # Use these instructions {instructions_new} "
+            #f"If you determine professional medical help is needed, start your response with '[DOCTOR_NEEDED]' followed by the reason and urgency level (normal/urgent/emergency)."
+            f"{prompt}"
+            f"If there is need and user asked request for a calling the doctor , format your response as: [CALL_DOCTOR]{{\"action\":\"call_doctor\",\"reason\":\"...\",\"urgency\":\"normal\",\"consultation_type\":\"phone\"}} followed by your message."
     )
+    print("Context",context)
     response = st.session_state.workflow.physcatrist.run(context)
     response_text = extract_content_from_response(response)
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": response_text
-    })
+    # Check if doctor consultation is recommended
+    # if response_text.startswith('[CALL_DOCTOR]') or response_text.startswith('[call_doctor]')  :
+    if '[CALL_DOCTOR]' in response_text:
+        print("===== Chat Approach =====")
+        try:
+            start_idx = response_text.find('{')
+            end_idx = response_text.find('}') + 1
+            json_str = response_text[start_idx:end_idx]
+            print("Print Json_str",json_str,type(json_str))
+             # Clean malformed JSON
+            json_str = json_str.replace('""', '"')  # Fix double quotes
+            json_str = json_str.replace('}.', '}')  # Remove trailing period
+            json_str = json_str.replace('}"', '}')  # Remove trailing quote
+
+            print("Cleaned JSON:", json_str)
+
+            data = json.loads(json_str)
+            print("======Data======",data)
+            print(f"Reasoning {data.get('reason')},Urgency {data.get('urgency')}")
+            consultation_result = doctor_consultation_tool(
+                reason=data.get('reason'),
+                urgency=data.get('urgency', 'normal')
+            )
+            
+            # Clean response for display
+            message = response_text[end_idx:].strip()
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": message
+            })
+        except:
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": response_text
+            })
+        # Parse the recommendation
+        # parts = response_text[14:].split('\n', 2)
+        # reason = parts[0].strip()
+        # urgency = parts[1].strip() if len(parts) > 1 else "normal"
+        # message = parts[2].strip() if len(parts) > 2 else ""
+        
+        # # Call the doctor consultation tool
+        # consultation_result = doctor_consultation_tool(reason, urgency)
+        
+        # # Append both the AI's message and consultation interface
+        # st.session_state.messages.append({
+        #     "role": "assistant",
+        #     "content": message
+        # })
+    else:
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": response_text
+        })
+    # st.session_state.messages.append({
+    #     "role": "assistant",
+    #     "content": response_text
+    # })
 
 class WellnessWorkflow(Workflow):
     user_info: dict = {}
@@ -232,8 +303,8 @@ class WellnessWorkflow(Workflow):
         instructions=Phsy_instructions,
         storage=SqlAgentStorage(db_file="wellness_agent.db", table_name="phsycatrist"),
         markdown=True,
-        debug=False,
-        tools=[doctor_consultation_tool]
+        debug=False
+        # tools=[doctor_consultation_tool]
     )
 
 # Initialize session state
@@ -392,7 +463,7 @@ else:
         except:
             user_lang = "en"  # Default to English
         
-        context = dedent(f"""
+        context_new = dedent(f"""
             User details:
             - Name: {user_info.get('name')}
             - Age: {user_info.get('age')}
@@ -406,9 +477,14 @@ else:
             - Sleep: {health_data.get('sleep_hours', 'Not logged')} hours
             Last summary: {st.session_state.conversation_summary}
             User query: {prompt}
-        """).strip()
-        response = st.session_state.workflow.physcatrist.run(context)
-        response_text = truncate_response(extract_content_from_response(response))
-        
-        st.session_state.messages.append({"role": "assistant", "content": response_text})
+            
+        """
+        # f"If doctor consultation is needed, format your response as: [CALL_DOCTOR]{{\"action\":\"call_doctor\",\"reason\":\"...\",\"urgency\":\"normal\",\"consultation_type\":\"phone\"}} followed by your message.").strip()
+        )
+        generate_bot_response(context_new)
         st.rerun()
+        # response = st.session_state.workflow.physcatrist.run(context)
+        # response_text = truncate_response(extract_content_from_response(response))
+        
+        # st.session_state.messages.append({"role": "assistant", "content": response_text})
+        # st.rerun()
