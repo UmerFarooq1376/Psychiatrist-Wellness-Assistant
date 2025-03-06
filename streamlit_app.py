@@ -9,11 +9,14 @@ from phi.model.ollama import Ollama
 import os
 from datetime import datetime
 from PyPDF2 import PdfReader
+import webbrowser
+from typing import Dict, List
+
 
 load_dotenv()
 
 # Initialize Ollama model
-base_model = Ollama(id="deepseek-r1:1.5b")
+base_model = Ollama(id="llama3.1:latest")
 
 # Instructions for the agent
 Phsy_instructions = [
@@ -35,8 +38,28 @@ Phsy_instructions = [
         4. Maintain a supportive and empathetic tone.
         5. At the end make a bullet points of possible reasons 
         
-        """
-    ]
+        Additional Guidelines:
+        - ** CALL THE DOCTOR IF USER ASK YOU TO MAKE A DOCTOR CONSULTATION **
+        - If you detect severe symptoms or situations requiring professional medical attention,
+          use the doctor_consultation_tool to connect the user with a specialist.
+        - Recommend doctor consultation for:
+          * Severe depression or anxiety symptoms
+          * Suicidal thoughts
+          * Complex mental health issues
+          * Cases requiring medication
+          * Situations beyond AI assistance scope
+          
+          - Don't Recommend doctor consultation for:
+          * Diet plan queries
+          * Personal health concerns that are not medical emergencies
+        
+        When recommending a doctor:
+        1. Explain why professional help is needed
+        2. Call the doctor_consultation_tool with appropriate reason and urgency
+        3. Continue providing support while arranging the consultation
+        
+
+        """ ]
 
 
 
@@ -69,6 +92,78 @@ instructions_new=["""You are Psychiatrist, an AI-powered assistant specializing 
                         Word limit(max 100 words)
                         
 # #                         """]
+
+# def doctor_consultation_tool(reason: str, urgency: str = "normal") -> Dict:
+#     """
+#     Tool for initiating doctor consultation when the AI determines it's necessary.
+    
+#     Args:
+#         reason: The medical reason for consultation
+#         urgency: Urgency level ("normal", "urgent", "emergency")
+#     """
+#     print("======= Calling Doctor ========")
+    
+#     st.subheader("🏥 Doctor Consultation Recommended")
+#     st.write(f"Reason: {reason}")
+#     st.write(f"Urgency: {urgency}")
+    
+#     doctors = {
+#         "Dr. Smith (General Psychiatrist)": "+1-555-0123",
+#         "Dr. Johnson (Anxiety Specialist)": "+1-555-0124",
+#         "Dr. Williams (Depression Specialist)": "+1-555-0125"
+#     }
+    
+#     call_type = st.radio("Select consultation method:", ["Phone Call", "Video Call"])
+#     selected_doctor = st.selectbox("Choose a specialist:", list(doctors.keys()))
+    
+#     if st.button("Connect Now"):
+#         phone_number = doctors[selected_doctor]
+#         if call_type == "Phone Call":
+#             webbrowser.open(f"tel:{phone_number}")
+#         else:
+#             st.info(f"Initiating video call with {selected_doctor}")
+        
+#         return {
+#             "status": "success",
+#             "doctor": selected_doctor,
+#             "consultation_type": call_type,
+#             "reason": reason
+#         }
+    
+#     return {"status": "pending"}
+def doctor_consultation_tool(reason: str, urgency: str = "normal") -> str:
+    """
+    Tool for initiating doctor consultation when the AI determines it's necessary.
+    
+    Args:
+        reason: The medical reason for consultation
+        urgency: Urgency level ("normal", "urgent", "emergency")
+    Returns:
+        str: A formatted string describing the consultation status
+    """
+    st.subheader("🏥 Doctor Consultation Recommended")
+    st.write(f"Reason: {reason}")
+    st.write(f"Urgency: {urgency}")
+    
+    doctors = {
+        "Dr. Smith (General Psychiatrist)": "+1-555-0123",
+        "Dr. Johnson (Anxiety Specialist)": "+1-555-0124",
+        "Dr. Williams (Depression Specialist)": "+1-555-0125"
+    }
+    
+    call_type = st.radio("Select consultation method:", ["Phone Call", "Video Call"])
+    selected_doctor = st.selectbox("Choose a specialist:", list(doctors.keys()))
+    
+    if st.button("Connect Now"):
+        phone_number = doctors[selected_doctor]
+        if call_type == "Phone Call":
+            webbrowser.open(f"tel:{phone_number}")
+        else:
+            st.info(f"Initiating video call with {selected_doctor}")
+        
+        return f"Consultation arranged with {selected_doctor} via {call_type} for {reason} (Urgency: {urgency})"
+    
+    return f"Doctor consultation pending. Please click 'Connect Now' to proceed."
 
 def read_pdf(file_path):
     """
@@ -152,7 +247,8 @@ class WellnessWorkflow(Workflow):
         instructions=Phsy_instructions,
         storage=SqlAgentStorage(db_file="wellness_agent.db", table_name="phsycatrist"),
         markdown=True,
-        debug=False
+        debug=False,
+        tools=[doctor_consultation_tool] 
     )
 
 # Initialize session state
