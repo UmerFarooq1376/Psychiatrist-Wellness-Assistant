@@ -53,11 +53,22 @@ Phsy_instructions = [
           * Diet plan queries
           * Personal health concerns that are not medical emergencies
         
+        -** USE schedule_appointment_tool WHEN: **
+          * User requests to schedule a future appointment
+          * User wants to plan a consultation
+          * User needs to book a specific time with a specialist
+          * Follow-up appointments are needed
+        
         When recommending a doctor:
         1. Explain why professional help is needed
         2. Call the doctor_consultation_tool with appropriate reason and urgency
         3. Continue providing support while arranging the consultation
         
+        When scheduling appointments:
+        1. Ask for preferred specialist type
+        2. Inquire about preferred time
+        3. Use schedule_appointment_tool to arrange the meeting
+        4. Confirm the appointment details with the user
 
         """ ]
 
@@ -194,7 +205,30 @@ def read_pdf(file_path):
     except Exception as e:
         return {'error': f'Error reading PDF: {str(e)}'}
     
+#Schedule Appointment Tool 
+
+def schedule_appointment_tool(specialist_type: str, preferred_time: str) -> str:
+    """
+    Tool for scheduling future appointments with healthcare professionals.
+    """
+    st.subheader("📅 Schedule an Appointment")
+    specialists = {
+        "Psychiatrist": ["Dr. Smith", "Dr. Johnson"],
+        "Therapist": ["Dr. Brown", "Dr. Davis"],
+        "Nutritionist": ["Dr. Wilson", "Dr. Taylor"],
+        "Wellness Coach": ["Coach Miller", "Coach Anderson"]
+    }
     
+    date = st.date_input("Select Date")
+    time_slots = st.selectbox("Available Time Slots", 
+                            ["9:00 AM", "11:00 AM", "2:00 PM", "4:00 PM"])
+    available_specialists = specialists.get(specialist_type, ["No specialists available"])
+    selected_specialist = st.selectbox("Choose Specialist", available_specialists)
+    
+    if st.button("Confirm Appointment"):
+        return f"Appointment scheduled with {selected_specialist} for {date} at {time_slots}"
+    return "Please confirm your appointment"
+
     
 # Truncate function
 def truncate_response(text, max_words=1000):
@@ -248,7 +282,7 @@ class WellnessWorkflow(Workflow):
         storage=SqlAgentStorage(db_file="wellness_agent.db", table_name="phsycatrist"),
         markdown=True,
         debug=False,
-        tools=[doctor_consultation_tool] 
+        tools=[doctor_consultation_tool,schedule_appointment_tool] 
     )
 
 # Initialize session state
