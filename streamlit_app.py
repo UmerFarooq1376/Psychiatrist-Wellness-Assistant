@@ -158,7 +158,32 @@ instructions_new=["""You are Psychiatrist, an AI-powered assistant specializing 
 #             "consultation_type": call_type,
 #             "reason": reason
 #         }
+def call_doctor():
+    """Handle doctor call functionality"""
+    st.subheader("Contact a Doctor")
+    call_type = st.radio("Select contact method:", ["Phone Call", "Video Call"])
     
+    # Display available doctors
+    doctors = {
+        "Dr. Smith": "+1-555-0123",
+        "Dr. Johnson": "+1-555-0124",
+        "Dr. Williams": "+1-555-0125"
+    }
+    
+    selected_doctor = st.selectbox("Choose a doctor:", list(doctors.keys()))
+    
+    if st.button("Connect Now"):
+        phone_number = doctors[selected_doctor]
+        if call_type == "Phone Call":
+            # For phone calls, we use tel: protocol
+            webbrowser.open(f"tel:{phone_number}")
+        else:
+            # For video calls, you might want to integrate with a telemedicine platform
+            st.info(f"Initiating video call with {selected_doctor}")
+            # Add your video call integration here
+        
+        st.success(f"Connecting you with {selected_doctor}")
+
 #     return {"status": "pending"}
 def doctor_consultation_tool(reason: str, urgency: str = "normal") -> str:
     """Tool for initiating doctor consultation"""
@@ -408,6 +433,9 @@ else:
             })
             generate_bot_response()
             st.rerun()
+            
+        if st.button("📞 Call Doctor"):
+            call_doctor()
         # Add more buttons as needed
     with st.sidebar:
         st.header("Health Tracker")
