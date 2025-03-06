@@ -59,6 +59,15 @@ Phsy_instructions = [
           * User needs to book a specific time with a specialist
           * Follow-up appointments are needed
         
+        - ** USE symptom_tracker_tool WHEN: **
+          * User mentions new symptoms
+          * User wants to track their mental health symptoms
+          * User describes changes in their condition
+          * Regular monitoring of ongoing health issues is needed
+          * User reports anxiety, depression, or mood changes
+          * Sleep pattern changes are reported
+          * Physical symptoms that may relate to mental health
+        
         When recommending a doctor:
         1. Explain why professional help is needed
         2. Call the doctor_consultation_tool with appropriate reason and urgency
@@ -70,6 +79,14 @@ Phsy_instructions = [
         3. Use schedule_appointment_tool to arrange the meeting
         4. Confirm the appointment details with the user
 
+        When using symptom tracker:
+        1. Ask specific questions about symptom intensity
+        2. Inquire about symptom duration
+        3. Request additional context or notes
+        4. Use symptom_tracker_tool to log the information
+        5. Review tracked symptoms to identify patterns
+        6. Provide feedback based on tracked symptoms
+    
         """ ]
 
 
@@ -229,6 +246,52 @@ def schedule_appointment_tool(specialist_type: str, preferred_time: str) -> str:
         return f"Appointment scheduled with {selected_specialist} for {date} at {time_slots}"
     return "Please confirm your appointment"
 
+
+def symptom_tracker_tool(symptoms: List[str] = None) -> str:
+    """
+    Tool for tracking user's symptoms over time.
+    
+    Args:
+        symptoms: Optional list of symptoms to track. If None, will use user input.
+    Returns:
+        str: Status message about the logged symptoms
+    """
+    st.subheader("📊 Symptom Tracker")
+    
+    if symptoms is None:
+        symptoms = []
+    
+    # Add symptom input
+    symptom_input = st.text_input("Enter symptoms (comma-separated)")
+    if symptom_input:
+        symptoms.extend([s.strip() for s in symptom_input.split(',')])
+    
+    # Display current symptoms
+    if symptoms:
+        st.write("Tracking symptoms:", ", ".join(symptoms))
+    
+    symptom_intensity = st.slider("Symptom Intensity (1-10)", 1, 10, 5)
+    duration = st.text_input("Duration (e.g., 2 days)")
+    additional_notes = st.text_area("Additional Notes")
+    
+    if st.button("Log Symptoms"):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        symptom_log = {
+            'timestamp': timestamp,
+            'symptoms': symptoms,
+            'intensity': symptom_intensity,
+            'duration': duration,
+            'notes': additional_notes
+        }
+        
+        # Store in session state if needed
+        if 'symptom_logs' not in st.session_state:
+            st.session_state.symptom_logs = []
+        st.session_state.symptom_logs.append(symptom_log)
+        
+        return f"Symptoms logged at {timestamp}: {', '.join(symptoms)} (Intensity: {symptom_intensity}, Duration: {duration})"
+    
+    return "Please log your symptoms"
     
 # Truncate function
 def truncate_response(text, max_words=1000):
@@ -282,7 +345,7 @@ class WellnessWorkflow(Workflow):
         storage=SqlAgentStorage(db_file="wellness_agent.db", table_name="phsycatrist"),
         markdown=True,
         debug=False,
-        tools=[doctor_consultation_tool,schedule_appointment_tool] 
+        tools=[doctor_consultation_tool,schedule_appointment_tool,symptom_tracker_tool] 
     )
 
 # Initialize session state
