@@ -9,11 +9,14 @@ from phi.model.ollama import Ollama
 import os
 from datetime import datetime
 from PyPDF2 import PdfReader
+import webbrowser
+from typing import Dict, List
+
 
 load_dotenv()
 
 # Initialize Ollama model
-base_model = Ollama(id="deepseek-r1:1.5b")
+base_model = Ollama(id="llama3.1:latest")
 
 # Instructions for the agent
 Phsy_instructions = [
@@ -34,9 +37,58 @@ Phsy_instructions = [
         3. Prioritize actionable advice tailored to the user's specific data.
         4. Maintain a supportive and empathetic tone.
         5. At the end make a bullet points of possible reasons 
+         ** CALL THE DOCTOR IF USER ASK YOU TO MAKE A DOCTOR CONSULTATION **
         
-        """
-    ]
+        Additional Guidelines:
+        - ** CALL THE DOCTOR IF USER ASK YOU TO MAKE A DOCTOR CONSULTATION **
+        - If you detect severe symptoms or situations requiring professional medical attention,
+          use the doctor_consultation_tool to connect the user with a specialist.
+        - Recommend doctor consultation for:
+          * Severe depression or anxiety symptoms
+          * Suicidal thoughts
+          * Complex mental health issues
+          * Cases requiring medication
+          * Situations beyond AI assistance scope
+          
+          - Don't Recommend doctor consultation for:
+          * Diet plan queries
+          * Personal health concerns that are not medical emergencies
+        
+        -** USE schedule_appointment_tool WHEN: **
+          * User requests to schedule a future appointment
+          * User wants to plan a consultation
+          * User needs to book a specific time with a specialist
+          * Follow-up appointments are needed
+        
+        - ** USE symptom_tracker_tool WHEN: **
+          * User mentions new symptoms
+          * User wants to track their mental health symptoms
+          * User describes changes in their condition
+          * Regular monitoring of ongoing health issues is needed
+          * User reports anxiety, depression, or mood changes
+          * Sleep pattern changes are reported
+          * Physical symptoms that may relate to mental health
+        
+        When recommending a doctor:
+        1. Explain why professional help is needed
+        2. Call the doctor_consultation_tool with appropriate reason and urgency
+        3. Continue providing support while arranging the consultation
+        
+        When scheduling appointments:
+        1. Ask for preferred specialist type
+        2. Inquire about preferred time
+        3. Use schedule_appointment_tool to arrange the meeting
+        4. Confirm the appointment details with the user
+
+        When using symptom tracker:
+        1. Ask specific questions about symptom intensity
+        2. Inquire about symptom duration
+        3. Request additional context or notes
+        4. Use symptom_tracker_tool to log the information
+        5. Review tracked symptoms to identify patterns
+        6. Provide feedback based on tracked symptoms
+    
+        """ ]
 
 
 
@@ -70,6 +122,78 @@ instructions_new=["""You are Psychiatrist, an AI-powered assistant specializing 
                         
 # #                         """]
 
+# def doctor_consultation_tool(reason: str, urgency: str = "normal") -> Dict:
+#     """
+#     Tool for initiating doctor consultation when the AI determines it's necessary.
+    
+#     Args:
+#         reason: The medical reason for consultation
+#         urgency: Urgency level ("normal", "urgent", "emergency")
+#     """
+#     print("======= Calling Doctor ========")
+    
+#     st.subheader("🏥 Doctor Consultation Recommended")
+#     st.write(f"Reason: {reason}")
+#     st.write(f"Urgency: {urgency}")
+    
+#     doctors = {
+#         "Dr. Smith (General Psychiatrist)": "+1-555-0123",
+#         "Dr. Johnson (Anxiety Specialist)": "+1-555-0124",
+#         "Dr. Williams (Depression Specialist)": "+1-555-0125"
+#     }
+    
+#     call_type = st.radio("Select consultation method:", ["Phone Call", "Video Call"])
+#     selected_doctor = st.selectbox("Choose a specialist:", list(doctors.keys()))
+    
+#     if st.button("Connect Now"):
+#         phone_number = doctors[selected_doctor]
+#         if call_type == "Phone Call":
+#             webbrowser.open(f"tel:{phone_number}")
+#         else:
+#             st.info(f"Initiating video call with {selected_doctor}")
+        
+#         return {
+#             "status": "success",
+#             "doctor": selected_doctor,
+#             "consultation_type": call_type,
+#             "reason": reason
+#         }
+    
+#     return {"status": "pending"}
+def doctor_consultation_tool(reason: str, urgency: str = "normal") -> str:
+    """Tool for initiating doctor consultation"""
+    if 'show_doctor_ui' not in st.session_state:
+        st.session_state.show_doctor_ui = True
+    
+    if st.session_state.show_doctor_ui:
+        st.subheader("🏥 Doctor Consultation Recommended")
+        st.write(f"Reason: {reason}")
+        st.write(f"Urgency: {urgency}")
+        
+        doctors = {
+            "Dr. Smith (General Psychiatrist)": "+1-555-0123",
+            "Dr. Johnson (Anxiety Specialist)": "+1-555-0124",
+            "Dr. Williams (Depression Specialist)": "+1-555-0125"
+        }
+        
+        call_type = st.radio("Select consultation method:", ["Phone Call", "Video Call"], key="doctor_call_type")
+        selected_doctor = st.selectbox("Choose a specialist:", list(doctors.keys()), key="doctor_select")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Connect Now"):
+                phone_number = doctors[selected_doctor]
+                if call_type == "Phone Call":
+                    webbrowser.open(f"tel:{phone_number}")
+                else:
+                    st.info(f"Initiating video call with {selected_doctor}")
+                return f"Consultation arranged with {selected_doctor} via {call_type} for {reason} (Urgency: {urgency})"
+        with col2:
+            if st.button("Close"):
+                st.session_state.show_doctor_ui = False
+                return "Consultation cancelled"
+    
+    return "Doctor consultation interface closed"
 def read_pdf(file_path):
     """
     Reads a PDF file and returns its number of pages and text from the first page.
@@ -99,8 +223,78 @@ def read_pdf(file_path):
     except Exception as e:
         return {'error': f'Error reading PDF: {str(e)}'}
     
+#Schedule Appointment Tool 
+
+def schedule_appointment_tool(specialist_type: str, preferred_time: str) -> str:
+    """
+    Tool for scheduling future appointments with healthcare professionals.
+    """
+    st.subheader("📅 Schedule an Appointment")
+    specialists = {
+        "Psychiatrist": ["Dr. Smith", "Dr. Johnson"],
+        "Therapist": ["Dr. Brown", "Dr. Davis"],
+        "Nutritionist": ["Dr. Wilson", "Dr. Taylor"],
+        "Wellness Coach": ["Coach Miller", "Coach Anderson"]
+    }
     
+    date = st.date_input("Select Date")
+    time_slots = st.selectbox("Available Time Slots", 
+                            ["9:00 AM", "11:00 AM", "2:00 PM", "4:00 PM"])
+    available_specialists = specialists.get(specialist_type, ["No specialists available"])
+    selected_specialist = st.selectbox("Choose Specialist", available_specialists)
     
+    if st.button("Confirm Appointment"):
+        return f"Appointment scheduled with {selected_specialist} for {date} at {time_slots}"
+    return "Please confirm your appointment"
+
+
+def symptom_tracker_tool(symptoms: List[str] = None) -> str:
+    """Tool for tracking symptoms"""
+    if 'show_symptom_ui' not in st.session_state:
+        st.session_state.show_symptom_ui = True
+    
+    if st.session_state.show_symptom_ui:
+        st.subheader("📊 Symptom Tracker")
+        
+        if symptoms is None:
+            symptoms = []
+        
+        symptom_input = st.text_input("Enter symptoms (comma-separated)", key="symptom_input")
+        if symptom_input:
+            symptoms.extend([s.strip() for s in symptom_input.split(',')])
+        
+        if symptoms:
+            st.write("Tracking symptoms:", ", ".join(symptoms))
+        
+        symptom_intensity = st.slider("Symptom Intensity (1-10)", 1, 10, 5, key="symptom_intensity")
+        duration = st.text_input("Duration (e.g., 2 days)", key="symptom_duration")
+        additional_notes = st.text_area("Additional Notes", key="symptom_notes")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Log Symptoms"):
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+                symptom_log = {
+                    'timestamp': timestamp,
+                    'symptoms': symptoms,
+                    'intensity': symptom_intensity,
+                    'duration': duration,
+                    'notes': additional_notes
+                }
+                
+                if 'symptom_logs' not in st.session_state:
+                    st.session_state.symptom_logs = []
+                st.session_state.symptom_logs.append(symptom_log)
+                st.session_state.show_symptom_ui = False
+                return f"Symptoms logged at {timestamp}: {', '.join(symptoms)} (Intensity: {symptom_intensity}, Duration: {duration})"
+        with col2:
+            if st.button("Cancel Logging"):
+                st.session_state.show_symptom_ui = False
+                return "Symptom logging cancelled"
+    
+    return "Symptom tracker interface closed"    
+    
+
 # Truncate function
 def truncate_response(text, max_words=1000):
     words = text.split()
@@ -152,7 +346,8 @@ class WellnessWorkflow(Workflow):
         instructions=Phsy_instructions,
         storage=SqlAgentStorage(db_file="wellness_agent.db", table_name="phsycatrist"),
         markdown=True,
-        debug=False
+        debug=False,
+        tools=[doctor_consultation_tool,schedule_appointment_tool,symptom_tracker_tool] 
     )
 
 # Initialize session state
@@ -163,6 +358,7 @@ if "workflow" not in st.session_state:
     st.session_state.messages = []
     st.session_state.uploaded_files = []
     st.session_state.health_data = []
+    st.session_state.symptom_logs = []
 
 # User info collection form
 if not st.session_state.user_info_collected:
@@ -321,6 +517,7 @@ else:
             - Mood: {health_data.get('mood', 'Not logged')}
             - Sleep: {health_data.get('sleep_hours', 'Not logged')} hours
             Last summary: {st.session_state.conversation_summary}
+            - Symtoms: {st.session_state.symptom_logs}
             User query: {prompt}
         """).strip()
         response = st.session_state.workflow.physcatrist.run(context)
